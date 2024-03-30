@@ -1,0 +1,75 @@
+---
+
+- hosts: all
+  become: true
+  tasks:
+    - name: install updates (CentOS)
+      yum:
+        update_cache: yes
+        update_only: yes
+      when: ansible_distribution == 'CentOS'
+    
+    - name: install updates (ubuntu)
+      apt:
+        upgrade: dist
+        update_cache: yes
+      when: ansible_distribution == 'ubuntu'
+
+
+- hosts: all
+  become: true
+  tasks:
+    - name: install apache package and git package for ubuntu and CentOS
+      tags: apache, ubuntu, apache2
+      package:
+        name: 
+          - "{{ apache_package }}"
+          - "{{ git_package }}"
+        state: present
+
+    - name: start apache service
+      tags: apache, CentOS, httpd
+      service:
+        name: "{{ apache_service }}"
+        state: started
+        enabled: yes
+      when: ansible_distribution == 'CentOS'
+
+    - name: open port 80
+      tags: apache, centos, httpd
+      firewalld:
+        service: http
+        permanent: yes
+        state: enabled
+      when: ansible_distribution == 'CentOS'
+      notify: 
+        - Reload firewalld
+  
+    - name: Reload firewalld
+      service:
+        name: firewalld
+        state: reloaded
+      when: ansible_distribution == 'CentOS'
+
+    - name: git clone chibuzo
+      tags: git, apache, ubuntu, httpd 
+      synchronize:
+        src: /home/vagrant/ansible/git_repo/wp-pusher-assignment-alt-school/
+        dest: /var/www/html
+        recursive: yes
+    
+    # - name: Clone Github repository and change permissions
+    #   git:
+    #     repo: https://github.com/CharlieNov17/wp-pusher-assignment-alt-school/
+    #     dest: /var/www/html/
+
+    # - name: Set ownership and permissions
+    #   file:
+    #     path: /var/www/html/
+    #     owner: root
+    #     group: root
+    #     mode: 0755
+    #     recurse: yes      
+
+
+   
